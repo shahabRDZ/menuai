@@ -19,7 +19,8 @@ from anthropic import AsyncAnthropic
 from PIL import Image
 
 from app.config import settings
-from app.exceptions import ServiceUnavailable, UpstreamError
+from app.exceptions import UpstreamError
+from app.services.demo_menu import demo_dish_explanation, demo_menu
 
 _MENU_SCAN_SYSTEM = """You are an expert multilingual menu translator and food critic.
 
@@ -108,9 +109,11 @@ class MenuVisionService:
         self._client: AsyncAnthropic | None = None
 
     @property
+    def demo_mode(self) -> bool:
+        return not self._api_key
+
+    @property
     def client(self) -> AsyncAnthropic:
-        if not self._api_key:
-            raise ServiceUnavailable("Menu vision service is not configured")
         if self._client is None:
             self._client = AsyncAnthropic(api_key=self._api_key)
         return self._client
@@ -121,6 +124,9 @@ class MenuVisionService:
         target_language: str,
         source_language: str = "auto",
     ) -> ParsedMenu:
+        if self.demo_mode:
+            return self._to_parsed_menu(demo_menu(target_language))
+
         compressed, media_type = self._compress_image(image_bytes)
         b64 = base64.b64encode(compressed).decode()
 
@@ -165,6 +171,16 @@ class MenuVisionService:
         target_language: str,
         source_language: str = "auto",
     ) -> DishExplanation:
+        if self.demo_mode:
+            data = demo_dish_explanation(dish_name, target_language)
+            return DishExplanation(
+                name_translated=str(data.get("name_translated") or dish_name),
+                description=str(data.get("description") or ""),
+                ingredients=list(data.get("ingredients") or []),
+                allergens=list(data.get("allergens") or []),
+                cultural_context=data.get("cultural_context"),
+            )
+
         instruction = (
             f'Dish name: "{dish_name}"\n'
             f"Source language: {source_language}\n"
@@ -215,6 +231,14 @@ class MenuVisionService:
             return json.loads(text)
         except json.JSONDecodeError as e:
             raise UpstreamError(f"Model returned invalid JSON: {e}") from e
+
+    @classmethod
+    def _to_parsed_menu(cls, raw: dict[str, Any]) -> ParsedMenu:
+        dishes = [cls._to_parsed_dish(d) for d in raw.get("dishes", [])]
+        return ParsedMenu(
+            restaurant_name=raw.get("restaurant_name"),
+            dishes=[d for d in dishes if d is not None],
+        )
 
     @staticmethod
     def _to_parsed_dish(raw: Any) -> ParsedDish | None:
