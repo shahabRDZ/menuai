@@ -10,6 +10,22 @@ Living in Istanbul, reading a Turkish menu one line at a time through a translat
 app gets old fast. The whole flow — photograph, translate dish by dish, guess the
 allergens — should collapse into a single action. That's MenuAI.
 
+![Landing page](./docs/screenshots/01-landing.png)
+
+## Screens
+
+| Capture | Review | Keep |
+|---------|--------|------|
+| ![Scan a menu](./docs/screenshots/05-scan-upload.png) | ![Scan detail](./docs/screenshots/06-scan-detail.png) | ![Favorites](./docs/screenshots/08-favorites.png) |
+
+Works just as well on mobile:
+
+<p>
+  <img src="./docs/screenshots/mobile-01-landing.png" width="220" alt="Mobile landing" />
+  <img src="./docs/screenshots/mobile-02-history.png" width="220" alt="Mobile history" />
+  <img src="./docs/screenshots/mobile-03-scan.png" width="220" alt="Mobile scan detail" />
+</p>
+
 ## What it does
 
 - **Scan** — point the camera at a menu, get the whole thing parsed in seconds
@@ -71,7 +87,9 @@ menuai/
 
 ```bash
 cp .env.example .env
-# fill in ANTHROPIC_API_KEY
+# optional: add ANTHROPIC_API_KEY — with an empty key the stack runs in
+# demo mode and returns a canned Turkish menu fixture instead of calling
+# the vision model.
 
 docker compose up --build
 docker compose exec api alembic upgrade head
@@ -84,6 +102,16 @@ cd web && cp .env.example .env.local && npm install && npm run dev
 - Web → http://localhost:3000
 
 Mobile — see [`mobile/README.md`](./mobile/README.md) for simulator vs device setup.
+
+### Demo mode vs live mode
+
+| Mode  | `ANTHROPIC_API_KEY` | Behavior                                               |
+|-------|---------------------|--------------------------------------------------------|
+| Demo  | empty / unset       | Returns a canned multi-language Turkish menu fixture   |
+| Live  | `sk-ant-...`        | Calls the Anthropic vision model to parse real photos  |
+
+Demo mode is what powered the screenshots above — the entire product works
+end-to-end with no external calls.
 
 ## Deploy
 

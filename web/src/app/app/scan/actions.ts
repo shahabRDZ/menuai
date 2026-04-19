@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { api, ApiError } from "@/lib/api";
-import { requireSession } from "@/lib/session";
+import { getSessionToken } from "@/lib/session";
 
 export type ScanActionState = { error?: string } | null;
 
@@ -16,12 +16,15 @@ export async function scanMenuAction(
     return { error: "Please choose a menu photo to upload." };
   }
 
+  const token = await getSessionToken();
+  if (!token) {
+    return { error: "Session expired. Please log in again." };
+  }
+
   const targetLanguage = formData.get("target_language")?.toString() || undefined;
   const restaurantName = formData.get("restaurant_name")?.toString().trim() || undefined;
 
-  const { token } = await requireSession();
-
-  let scanId: string;
+  let scanId: string | undefined;
   try {
     const scan = await api.scanMenu(token, {
       image,
@@ -29,10 +32,14 @@ export async function scanMenuAction(
       targetLanguage,
       restaurantName,
     });
-    scanId = scan.id;
+    scanId = scan?.id;
   } catch (err) {
     if (err instanceof ApiError) return { error: err.message };
     return { error: "Could not scan this image. Try a clearer photo." };
+  }
+
+  if (!scanId) {
+    return { error: "Scan succeeded but returned no ID." };
   }
 
   redirect(`/app/scans/${scanId}`);
