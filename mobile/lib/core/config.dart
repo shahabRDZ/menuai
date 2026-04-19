@@ -3,7 +3,7 @@ class AppConfig {
 
   factory AppConfig.fromEnvironment() {
     const fromEnv = String.fromEnvironment('API_BASE_URL');
-    return const AppConfig(
+    return AppConfig(
       apiBaseUrl: fromEnv.isNotEmpty ? fromEnv : 'http://localhost:8000',
     );
   }

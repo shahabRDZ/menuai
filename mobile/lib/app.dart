@@ -7,6 +7,7 @@ import 'core/theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/register_page.dart';
+import 'features/import/import_page.dart';
 import 'features/scan/scan_page.dart';
 import 'features/scans/scan_detail_page.dart';
 import 'features/scans/scans_controller.dart';
@@ -53,6 +54,7 @@ class MenuAIApp extends StatelessWidget {
     if (name == '/login') return _page(const LoginPage());
     if (name == '/register') return _page(const RegisterPage());
     if (name == '/scan') return _page(const ScanPage());
+    if (name == '/import') return _page(const ImportPage());
 
     const scanDetailPrefix = '/scan/';
     if (name.startsWith(scanDetailPrefix)) {

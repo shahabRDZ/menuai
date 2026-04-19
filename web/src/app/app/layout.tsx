@@ -17,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </Link>
           <nav className="flex items-center gap-1 text-sm">
             <NavLink href="/app/scan">Scan</NavLink>
+            <NavLink href="/app/import">Import URL</NavLink>
             <NavLink href="/app">History</NavLink>
             <NavLink href="/app/favorites">Favorites</NavLink>
             <form action={logoutAction}>

@@ -10,6 +10,7 @@ from app.schemas.dish import (
     MenuScanSummary,
 )
 from app.services.ai import MenuVisionService, ParsedDish, ParsedMenu
+from app.services.url_fetcher import UrlFetcher
 
 
 class MenuService:
@@ -18,10 +19,12 @@ class MenuService:
         scans: MenuScanRepository,
         favorites: FavoriteRepository,
         vision: MenuVisionService,
+        url_fetcher: UrlFetcher,
     ) -> None:
         self.scans = scans
         self.favorites = favorites
         self.vision = vision
+        self.url_fetcher = url_fetcher
 
     async def scan(
         self,
@@ -42,6 +45,33 @@ class MenuService:
             user_id=user.id,
             restaurant_name=restaurant_name or parsed.restaurant_name,
             source_language=source_language,
+            target_language=target,
+        )
+        await self.scans.add(scan)
+
+        for position, parsed_dish in enumerate(parsed.dishes):
+            self.scans.session.add(self._to_dish(scan.id, position, parsed_dish))
+
+        await self.scans.session.commit()
+        fresh = await self.scans.reload_with_dishes(scan.id)
+        return self._to_scan_response(fresh, favorite_ids=set())
+
+    async def import_from_url(
+        self,
+        user: User,
+        url: str,
+        target_language: str | None,
+        restaurant_name: str | None,
+    ) -> MenuScanResponse:
+        target = target_language or user.target_language
+        text = await self.url_fetcher.fetch_text(url)
+        parsed = await self.vision.parse_menu_text(text=text, target_language=target)
+
+        scan = MenuScan(
+            user_id=user.id,
+            restaurant_name=restaurant_name or parsed.restaurant_name,
+            image_url=url,
+            source_language="auto",
             target_language=target,
         )
         await self.scans.add(scan)

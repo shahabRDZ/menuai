@@ -118,6 +118,24 @@ class ApiClient {
     return MenuScan.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
+  Future<MenuScan> importMenu({
+    required String url,
+    String? targetLanguage,
+    String? restaurantName,
+  }) async {
+    final response = await _http.post(
+      Uri.parse('$baseUrl/menus/import'),
+      headers: {'content-type': 'application/json', ..._authHeaders},
+      body: jsonEncode({
+        'url': url,
+        'target_language': targetLanguage ?? '',
+        'restaurant_name': restaurantName,
+      }),
+    );
+    _ensureOk(response);
+    return MenuScan.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
   Future<List<Dish>> listFavorites() async {
     final response = await _http.get(
       Uri.parse('$baseUrl/favorites'),

@@ -99,7 +99,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _targetLanguage,
+                  initialValue: _targetLanguage,
                   decoration: const InputDecoration(labelText: 'Translate menus to'),
                   items: supportedLanguages
                       .map(

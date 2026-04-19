@@ -20,7 +20,7 @@ class _ScansPageState extends State<ScansPage> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = const [_HistoryTab(), FavoritesTab(), _ProfileTab()];
+    const pages = [_HistoryTab(), FavoritesTab(), _ProfileTab()];
 
     return Scaffold(
       body: pages[_index],
@@ -46,13 +46,31 @@ class _ScansPageState extends State<ScansPage> {
         ],
       ),
       floatingActionButton: _index == 0
-          ? FloatingActionButton.extended(
-              onPressed: () => Navigator.of(context).pushNamed('/scan').then((_) {
-                // refresh list after returning
-                context.read<ScansController>().refresh();
-              }),
-              icon: const Icon(Icons.camera_alt_rounded),
-              label: const Text('Scan'),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'fab-import',
+                  onPressed: () async {
+                    final controller = context.read<ScansController>();
+                    await Navigator.of(context).pushNamed('/import');
+                    await controller.refresh();
+                  },
+                  child: const Icon(Icons.qr_code_scanner_rounded),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton.extended(
+                  heroTag: 'fab-scan',
+                  onPressed: () async {
+                    final controller = context.read<ScansController>();
+                    await Navigator.of(context).pushNamed('/scan');
+                    await controller.refresh();
+                  },
+                  icon: const Icon(Icons.camera_alt_rounded),
+                  label: const Text('Scan'),
+                ),
+              ],
             )
           : null,
     );

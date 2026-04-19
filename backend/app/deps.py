@@ -23,6 +23,7 @@ from app.services.security import (
     password_hasher,
     token_service,
 )
+from app.services.url_fetcher import UrlFetcher, url_fetcher
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=True)
 
@@ -39,6 +40,10 @@ def get_token_service() -> TokenService:
 
 def get_vision_service() -> MenuVisionService:
     return menu_vision_service
+
+
+def get_url_fetcher() -> UrlFetcher:
+    return url_fetcher
 
 
 def get_user_repository(db: DbSession) -> UserRepository:
@@ -69,8 +74,9 @@ def get_menu_service(
     scans: Annotated[MenuScanRepository, Depends(get_menu_scan_repository)],
     favorites: Annotated[FavoriteRepository, Depends(get_favorite_repository)],
     vision: Annotated[MenuVisionService, Depends(get_vision_service)],
+    fetcher: Annotated[UrlFetcher, Depends(get_url_fetcher)],
 ) -> MenuService:
-    return MenuService(scans=scans, favorites=favorites, vision=vision)
+    return MenuService(scans=scans, favorites=favorites, vision=vision, url_fetcher=fetcher)
 
 
 def get_favorite_service(

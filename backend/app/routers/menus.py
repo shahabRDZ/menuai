@@ -7,6 +7,7 @@ from app.exceptions import PayloadTooLarge, UnsupportedMedia
 from app.schemas.dish import (
     ExplainDishRequest,
     ExplainDishResponse,
+    ImportMenuRequest,
     MenuScanResponse,
     MenuScanSummary,
 )
@@ -41,6 +42,20 @@ async def scan_menu(
         target_language=target_language or None,
         source_language=source_language,
         restaurant_name=restaurant_name,
+    )
+
+
+@router.post("/import", response_model=MenuScanResponse, status_code=status.HTTP_201_CREATED)
+async def import_menu(
+    payload: ImportMenuRequest,
+    user: CurrentUser,
+    menus: MenuServiceDep,
+) -> MenuScanResponse:
+    return await menus.import_from_url(
+        user=user,
+        url=payload.url,
+        target_language=payload.target_language or None,
+        restaurant_name=payload.restaurant_name,
     )
 
 

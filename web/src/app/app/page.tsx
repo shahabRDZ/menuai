@@ -28,9 +28,14 @@ export default async function HistoryPage() {
               : `${scans.length} scan${scans.length === 1 ? "" : "s"} saved.`}
           </p>
         </div>
-        <Link href="/app/scan" className="btn-primary">
-          New scan
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/app/import" className="btn-ghost">
+            Import URL
+          </Link>
+          <Link href="/app/scan" className="btn-primary">
+            New scan
+          </Link>
+        </div>
       </header>
 
       {scans.length === 0 ? (

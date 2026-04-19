@@ -83,7 +83,7 @@ class _ScanViewState extends State<_ScanView> {
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                value: _targetLanguage,
+                initialValue: _targetLanguage,
                 decoration: const InputDecoration(labelText: 'Translate to'),
                 items: supportedLanguages
                     .map(

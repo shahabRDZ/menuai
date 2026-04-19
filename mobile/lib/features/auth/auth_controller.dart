@@ -20,9 +20,17 @@ class AuthController extends ChangeNotifier {
   User? get user => _user;
 
   Future<void> bootstrap() async {
-    final token = await sessionStore.readToken();
+    String? token;
+    try {
+      token = await sessionStore
+          .readToken()
+          .timeout(const Duration(seconds: 3), onTimeout: () => null);
+    } catch (_) {
+      token = null;
+    }
     if (token == null || token.isEmpty) {
       _setSignedOut();
+      notifyListeners();
       return;
     }
     api.setToken(token);
@@ -30,7 +38,9 @@ class AuthController extends ChangeNotifier {
       _user = await api.me();
       _status = AuthStatus.signedIn;
     } catch (_) {
-      await sessionStore.clear();
+      try {
+        await sessionStore.clear();
+      } catch (_) {}
       _setSignedOut();
     }
     notifyListeners();

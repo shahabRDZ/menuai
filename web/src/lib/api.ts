@@ -113,6 +113,21 @@ class ApiClient {
     return this.request("/menus/scan", { method: "POST", body: form, token });
   }
 
+  async importMenu(
+    token: string,
+    input: { url: string; targetLanguage?: string; restaurantName?: string },
+  ): Promise<MenuScan> {
+    return this.request("/menus/import", {
+      method: "POST",
+      token,
+      json: {
+        url: input.url,
+        target_language: input.targetLanguage ?? "",
+        restaurant_name: input.restaurantName ?? null,
+      },
+    });
+  }
+
   async listFavorites(token: string): Promise<Dish[]> {
     return this.request("/favorites", { token });
   }

@@ -48,6 +48,26 @@ Respond ONLY with valid JSON matching this shape:
 No prose, no markdown fences."""
 
 
+_MENU_TEXT_SYSTEM = """You are an expert multilingual menu translator.
+
+You receive the raw text or HTML of a digital restaurant menu (fetched from a URL
+that the user typically scanned as a QR code). Extract every dish you can find and
+return a structured JSON list.
+
+For each dish, fill the same fields as a photographed menu:
+- name_original, name_translated, description, category, price, currency,
+  ingredients (3-6 items, in the target language), allergens (subset of
+  gluten/dairy/egg/nuts/peanuts/seafood/fish/soy/sesame), is_vegetarian,
+  is_vegan, spice_level (0-3 or null)
+
+Ignore navigation, footers, cookie banners, delivery disclaimers, and marketing copy.
+
+Respond ONLY with valid JSON:
+{ "restaurant_name": string | null, "dishes": [ ... ] }
+
+No prose, no markdown fences."""
+
+
 _DISH_EXPLAIN_SYSTEM = """You are a multilingual food expert.
 
 Given a single dish name (in any language) and a target language, return a concise
@@ -164,6 +184,36 @@ class MenuVisionService:
             restaurant_name=data.get("restaurant_name"),
             dishes=[d for d in dishes if d is not None],
         )
+
+    async def parse_menu_text(
+        self,
+        text: str,
+        target_language: str,
+        source_language: str = "auto",
+    ) -> ParsedMenu:
+        if self.demo_mode:
+            return self._to_parsed_menu(demo_menu(target_language))
+
+        instruction = (
+            f"Target language: {target_language}\n"
+            f"Source language hint: {source_language}\n"
+            "Menu content follows, delimited by ===.\n"
+            f"===\n{text}\n===\n"
+            "Return the JSON object only."
+        )
+
+        response = await self.client.messages.create(
+            model=self._model,
+            max_tokens=4096,
+            system=[
+                {"type": "text", "text": _MENU_TEXT_SYSTEM, "cache_control": {"type": "ephemeral"}}
+            ],
+            messages=[{"role": "user", "content": instruction}],
+        )
+        data = self._parse_json_response(response)
+        if not isinstance(data, dict) or "dishes" not in data:
+            raise UpstreamError("Model response missing 'dishes' field")
+        return self._to_parsed_menu(data)
 
     async def explain_dish(
         self,

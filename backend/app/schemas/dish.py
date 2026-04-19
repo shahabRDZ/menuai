@@ -52,6 +52,12 @@ class MenuScanSummary(BaseModel):
         from_attributes = True
 
 
+class ImportMenuRequest(BaseModel):
+    url: str
+    target_language: str = ""
+    restaurant_name: str | None = None
+
+
 class ExplainDishRequest(BaseModel):
     dish_name: str
     source_language: str = "auto"
