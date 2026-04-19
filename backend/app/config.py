@@ -20,5 +20,18 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
+    @property
+    def async_database_url(self) -> str:
+        """Force the async driver. Railway/Heroku/Render expose URLs as
+        ``postgres://`` or ``postgresql://``; SQLAlchemy's async engine
+        expects ``postgresql+asyncpg://``.
+        """
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://") :]
+        if url.startswith("postgresql://") and "+asyncpg" not in url:
+            url = "postgresql+asyncpg://" + url[len("postgresql://") :]
+        return url
+
 
 settings = Settings()
