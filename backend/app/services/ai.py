@@ -130,7 +130,9 @@ class MenuVisionService:
 
     @property
     def demo_mode(self) -> bool:
-        return not self._api_key
+        # Empty, unset, or clearly-not-a-real-key values all trigger demo mode.
+        # Real Anthropic keys start with "sk-ant-".
+        return not self._api_key or not self._api_key.startswith("sk-")
 
     @property
     def client(self) -> AsyncAnthropic:
