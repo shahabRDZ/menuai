@@ -29,7 +29,18 @@ class Dish(Base):
     allergens: Mapped[list[str] | None] = mapped_column(JSON)
     is_vegetarian: Mapped[bool | None] = mapped_column()
     is_vegan: Mapped[bool | None] = mapped_column()
+    is_halal_possible: Mapped[bool | None] = mapped_column()
     spice_level: Mapped[int | None] = mapped_column(Integer)
+
+    allergen_risk: Mapped[str | None] = mapped_column(String(10))
+    hidden_risks: Mapped[list[str] | None] = mapped_column(JSON)
+    local_popularity: Mapped[str | None] = mapped_column(String(10))
+    tourist_trap_risk: Mapped[str | None] = mapped_column(String(10))
+    value_assessment: Mapped[str | None] = mapped_column(String(15))
+    recommendation_score: Mapped[int | None] = mapped_column(Integer)
+    cultural_context: Mapped[dict | None] = mapped_column(JSON)
+    ai_metadata: Mapped[dict | None] = mapped_column(JSON)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

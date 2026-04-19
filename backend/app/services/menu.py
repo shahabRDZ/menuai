@@ -41,17 +41,13 @@ class MenuService:
             source_language=source_language,
         )
 
-        scan = MenuScan(
-            user_id=user.id,
-            restaurant_name=restaurant_name or parsed.restaurant_name,
+        scan = await self._persist_scan(
+            user=user,
+            parsed=parsed,
+            restaurant_name=restaurant_name,
             source_language=source_language,
             target_language=target,
         )
-        await self.scans.add(scan)
-
-        for position, parsed_dish in enumerate(parsed.dishes):
-            self.scans.session.add(self._to_dish(scan.id, position, parsed_dish))
-
         await self.scans.session.commit()
         fresh = await self.scans.reload_with_dishes(scan.id)
         return self._to_scan_response(fresh, favorite_ids=set())
@@ -67,18 +63,14 @@ class MenuService:
         text = await self.url_fetcher.fetch_text(url)
         parsed = await self.vision.parse_menu_text(text=text, target_language=target)
 
-        scan = MenuScan(
-            user_id=user.id,
-            restaurant_name=restaurant_name or parsed.restaurant_name,
-            image_url=url,
+        scan = await self._persist_scan(
+            user=user,
+            parsed=parsed,
+            restaurant_name=restaurant_name,
             source_language="auto",
             target_language=target,
+            image_url=url,
         )
-        await self.scans.add(scan)
-
-        for position, parsed_dish in enumerate(parsed.dishes):
-            self.scans.session.add(self._to_dish(scan.id, position, parsed_dish))
-
         await self.scans.session.commit()
         fresh = await self.scans.reload_with_dishes(scan.id)
         return self._to_scan_response(fresh, favorite_ids=set())
@@ -134,6 +126,31 @@ class MenuService:
             cultural_context=explanation.cultural_context,
         )
 
+    async def _persist_scan(
+        self,
+        user: User,
+        parsed: ParsedMenu,
+        restaurant_name: str | None,
+        source_language: str,
+        target_language: str,
+        image_url: str | None = None,
+    ) -> MenuScan:
+        scan = MenuScan(
+            user_id=user.id,
+            restaurant_name=restaurant_name or parsed.restaurant_name,
+            location=parsed.location,
+            cuisine_type=parsed.cuisine_type,
+            image_url=image_url,
+            source_language=source_language,
+            target_language=target_language,
+            ai_recommendations=parsed.ai_recommendations,
+            order_suggestions=parsed.order_suggestions,
+        )
+        await self.scans.add(scan)
+        for position, parsed_dish in enumerate(parsed.dishes):
+            self.scans.session.add(self._to_dish(scan.id, position, parsed_dish))
+        return scan
+
     @staticmethod
     def _to_dish(scan_id: UUID, position: int, parsed: ParsedDish) -> Dish:
         return Dish(
@@ -147,9 +164,18 @@ class MenuService:
             currency=parsed.currency,
             ingredients=parsed.ingredients,
             allergens=parsed.allergens,
+            allergen_risk=parsed.allergen_risk,
+            hidden_risks=parsed.hidden_risks,
             is_vegetarian=parsed.is_vegetarian,
             is_vegan=parsed.is_vegan,
+            is_halal_possible=parsed.is_halal_possible,
             spice_level=parsed.spice_level,
+            local_popularity=parsed.local_popularity,
+            tourist_trap_risk=parsed.tourist_trap_risk,
+            value_assessment=parsed.value_assessment,
+            recommendation_score=parsed.recommendation_score,
+            cultural_context=parsed.cultural_context,
+            ai_metadata=parsed.metadata,
         )
 
     @staticmethod
@@ -157,9 +183,13 @@ class MenuService:
         return MenuScanResponse(
             id=scan.id,
             restaurant_name=scan.restaurant_name,
+            location=scan.location,
+            cuisine_type=scan.cuisine_type,
             source_language=scan.source_language,
             target_language=scan.target_language,
             created_at=scan.created_at,
+            ai_recommendations=scan.ai_recommendations,
+            order_suggestions=scan.order_suggestions,
             dishes=[MenuService._dish_to_response(d, d.id in favorite_ids) for d in scan.dishes],
         )
 
@@ -177,9 +207,17 @@ class MenuService:
             currency=dish.currency,
             ingredients=dish.ingredients,
             allergens=dish.allergens,
+            allergen_risk=dish.allergen_risk,
+            hidden_risks=dish.hidden_risks,
             is_vegetarian=dish.is_vegetarian,
             is_vegan=dish.is_vegan,
+            is_halal_possible=dish.is_halal_possible,
             spice_level=dish.spice_level,
+            local_popularity=dish.local_popularity,
+            tourist_trap_risk=dish.tourist_trap_risk,
+            value_assessment=dish.value_assessment,
+            recommendation_score=dish.recommendation_score,
+            cultural_context=dish.cultural_context,
             created_at=dish.created_at,
             is_favorite=is_favorite,
         )

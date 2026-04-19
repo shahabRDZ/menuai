@@ -38,6 +38,8 @@ export default async function ScanDetailPage({ params }: { params: Promise<Param
             {scan.restaurant_name ?? "Menu"}
           </h1>
           <p className="mt-1 text-sm text-ink-500">
+            {scan.cuisine_type && <>{scan.cuisine_type} · </>}
+            {scan.location && <>{scan.location} · </>}
             Translated to {languageLabel(scan.target_language)} · {scan.dishes.length}{" "}
             {scan.dishes.length === 1 ? "dish" : "dishes"}
           </p>
@@ -50,6 +52,13 @@ export default async function ScanDetailPage({ params }: { params: Promise<Param
         </form>
       </header>
 
+      {(scan.ai_recommendations || scan.order_suggestions) && (
+        <AiInsights
+          recommendations={scan.ai_recommendations}
+          orderSuggestions={scan.order_suggestions}
+        />
+      )}
+
       {scan.dishes.length === 0 ? (
         <div className="card p-8 text-center text-sm text-ink-500">
           We couldn&apos;t read any dishes from this photo. Try a clearer picture.
@@ -61,6 +70,75 @@ export default async function ScanDetailPage({ params }: { params: Promise<Param
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function AiInsights({
+  recommendations,
+  orderSuggestions,
+}: {
+  recommendations: Awaited<ReturnType<typeof api.getScan>>["ai_recommendations"];
+  orderSuggestions: Awaited<ReturnType<typeof api.getScan>>["order_suggestions"];
+}) {
+  return (
+    <section className="grid gap-4 md:grid-cols-2">
+      {recommendations && (
+        <div className="card p-5">
+          <h2 className="font-display text-lg font-semibold">MenuAI recommends</h2>
+          {recommendations.best_for_user && recommendations.best_for_user.length > 0 && (
+            <ul className="mt-3 space-y-2 text-sm">
+              {recommendations.best_for_user.map((r, i) => (
+                <li key={i}>
+                  <p className="font-medium text-ink-900">{r.dish_name}</p>
+                  <p className="text-ink-600">{r.reason}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          {recommendations.avoid_if && recommendations.avoid_if.length > 0 && (
+            <div className="mt-4 border-t border-ink-100 pt-3">
+              <p className="text-sm font-medium text-ink-900">Avoid if</p>
+              <ul className="mt-1 space-y-1 text-sm text-ink-600">
+                {recommendations.avoid_if.map((a, i) => (
+                  <li key={i}>
+                    <span className="font-medium">{a.condition}</span> — {a.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {orderSuggestions && (
+        <div className="card p-5">
+          <h2 className="font-display text-lg font-semibold">Ways to order</h2>
+          <dl className="mt-3 space-y-2 text-sm">
+            {orderSuggestions.light_option && (
+              <Row label="Light">{orderSuggestions.light_option}</Row>
+            )}
+            {orderSuggestions.protein_rich_option && (
+              <Row label="Protein-rich">{orderSuggestions.protein_rich_option}</Row>
+            )}
+            {orderSuggestions.budget_option && (
+              <Row label="Budget">{orderSuggestions.budget_option}</Row>
+            )}
+            {orderSuggestions.local_experience_option && (
+              <Row label="Local experience">{orderSuggestions.local_experience_option}</Row>
+            )}
+          </dl>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="w-28 shrink-0 text-ink-500">{label}</dt>
+      <dd className="text-ink-900">{children}</dd>
     </div>
   );
 }

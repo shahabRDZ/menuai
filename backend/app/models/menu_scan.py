@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import JSON, DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,8 +17,14 @@ class MenuScan(Base):
     )
     image_url: Mapped[str | None] = mapped_column(String(500))
     restaurant_name: Mapped[str | None] = mapped_column(String(200))
+    location: Mapped[str | None] = mapped_column(String(200))
+    cuisine_type: Mapped[str | None] = mapped_column(String(100))
     source_language: Mapped[str] = mapped_column(String(10), default="auto", nullable=False)
     target_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+
+    ai_recommendations: Mapped[dict | None] = mapped_column(JSON)
+    order_suggestions: Mapped[dict | None] = mapped_column(JSON)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

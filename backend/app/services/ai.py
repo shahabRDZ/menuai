@@ -22,50 +22,104 @@ from app.config import settings
 from app.exceptions import UpstreamError
 from app.services.demo_menu import demo_dish_explanation, demo_menu
 
-_MENU_SCAN_SYSTEM = """You are an expert multilingual menu translator and food critic.
+_MENU_SYSTEM_CORE = """You are MenuAI — a food intelligence system for global travelers.
 
-You receive photos of restaurant menus (often in Turkish, but any language is possible)
-and return a structured JSON list of every dish you can identify on the menu.
+Your job is to turn menu content into structured, safety-aware JSON. You never
+produce prose outside the JSON. Priorities, in order:
 
-For each dish:
-- name_original: the dish as printed on the menu (preserve original spelling)
-- name_translated: a natural, appetizing translation into the target language
-- description: 1-2 sentences describing what it is, in the target language. If the
-  menu has a description, translate it faithfully. Otherwise infer from dish knowledge.
-- category: appetizer | soup | salad | main | side | dessert | drink | unknown
-- price: numeric price if visible, else null
-- currency: "TRY" | "USD" | "EUR" | ... (ISO-4217) if visible, else null
-- ingredients: array of likely main ingredients (3-6 items) in the target language
-- allergens: array from ["gluten", "dairy", "egg", "nuts", "peanuts", "seafood",
-  "fish", "soy", "sesame"] - only include ones that are likely present
-- is_vegetarian: true/false/null (null if unsure)
-- is_vegan: true/false/null
-- spice_level: integer 0-3 where 0 is not spicy and 3 is very spicy, or null
+  1. Accuracy  2. Food safety (allergens)  3. Cultural insight  4. User intent
 
-Respond ONLY with valid JSON matching this shape:
-{ "restaurant_name": string | null, "dishes": [ ... ] }
+Core rules:
 
-No prose, no markdown fences."""
+- Infer *hidden* ingredients even when the menu doesn't list them
+  (e.g. meatballs → breadcrumbs, egg; cream sauces → dairy, flour).
+  Record these in `allergens.hidden_risks`.
+- Allergy safety: never understate risk. Prefer a false positive over a false
+  negative. `allergens.risk_level` is "high" whenever cross-contamination or
+  hidden ingredients are plausible.
+- Cultural context: for every dish, give origin (region or tradition if known),
+  when it's eaten, and any relevant cultural meaning.
+- `smart_insights` are grounded estimates, not guesses:
+  - local_popularity: how common this dish is with locals
+  - tourist_trap_risk: is this menu item over-priced for tourists
+  - value_assessment: "cheap" | "fair" | "expensive" for its category
+- `recommendation_score` (0-100) balances safety, popularity, price fairness,
+  and how authentic the dish is.
+
+Schema — return exactly this shape (use null or [] for missing values):
+
+{
+  "restaurant_context": {
+    "name": string | null,
+    "location": string | null,
+    "cuisine_type": string | null
+  },
+  "dishes": [
+    {
+      "original_name": string,
+      "translated_name": string,
+      "description": string,
+      "category": "appetizer" | "soup" | "salad" | "main" | "side"
+                   | "dessert" | "drink" | "snack" | "unknown",
+      "price": { "value": number | null, "currency": string | null },
+      "ingredients": [string, ...],
+      "allergens": {
+        "contains": [string, ...],
+        "risk_level": "low" | "medium" | "high",
+        "hidden_risks": [string, ...]
+      },
+      "dietary_flags": {
+        "vegetarian": boolean | null,
+        "vegan": boolean | null,
+        "halal_possible": boolean | null
+      },
+      "spice_level": 0 | 1 | 2 | 3 | null,
+      "cultural_context": {
+        "origin": string | null,
+        "tradition": string | null,
+        "when_eaten": string | null
+      },
+      "smart_insights": {
+        "local_popularity": "low" | "medium" | "high",
+        "tourist_trap_risk": "low" | "medium" | "high",
+        "value_assessment": "cheap" | "fair" | "expensive"
+      },
+      "recommendation_score": number
+    }
+  ],
+  "ai_recommendations": {
+    "best_for_user": [ { "dish_name": string, "reason": string } ],
+    "avoid_if": [ { "condition": string, "reason": string } ]
+  },
+  "order_suggestions": {
+    "light_option": string | null,
+    "protein_rich_option": string | null,
+    "budget_option": string | null,
+    "local_experience_option": string | null
+  }
+}
+
+Allergen names must come from this set:
+  gluten, dairy, egg, nuts, peanuts, seafood, fish, soy, sesame.
+
+Translate `translated_name`, `description`, `ingredients`, the cultural context,
+and the recommendation reasons into the user's target language. Keep
+`original_name` as printed. No prose, no markdown fences."""
 
 
-_MENU_TEXT_SYSTEM = """You are an expert multilingual menu translator.
+_MENU_SCAN_SYSTEM = (
+    _MENU_SYSTEM_CORE
+    + "\n\nInput channel: photograph of a paper or printed menu. Use vision to "
+    "read every dish, including handwritten additions. Ignore decorative text."
+)
 
-You receive the raw text or HTML of a digital restaurant menu (fetched from a URL
-that the user typically scanned as a QR code). Extract every dish you can find and
-return a structured JSON list.
 
-For each dish, fill the same fields as a photographed menu:
-- name_original, name_translated, description, category, price, currency,
-  ingredients (3-6 items, in the target language), allergens (subset of
-  gluten/dairy/egg/nuts/peanuts/seafood/fish/soy/sesame), is_vegetarian,
-  is_vegan, spice_level (0-3 or null)
-
-Ignore navigation, footers, cookie banners, delivery disclaimers, and marketing copy.
-
-Respond ONLY with valid JSON:
-{ "restaurant_name": string | null, "dishes": [ ... ] }
-
-No prose, no markdown fences."""
+_MENU_TEXT_SYSTEM = (
+    _MENU_SYSTEM_CORE
+    + "\n\nInput channel: text or HTML of a digital menu page (usually fetched "
+    "from a QR code URL). Ignore navigation, footers, cookie banners, delivery "
+    "disclaimers, and marketing copy."
+)
 
 
 _DISH_EXPLAIN_SYSTEM = """You are a multilingual food expert.
@@ -86,6 +140,21 @@ Allergens must be drawn from: gluten, dairy, egg, nuts, peanuts, seafood, fish, 
 No prose, no markdown fences."""
 
 
+_ALLERGEN_CANON = {
+    "gluten",
+    "dairy",
+    "egg",
+    "nuts",
+    "peanuts",
+    "seafood",
+    "fish",
+    "soy",
+    "sesame",
+}
+_RISK_LEVELS = {"low", "medium", "high"}
+_VALUE_LEVELS = {"cheap", "fair", "expensive"}
+
+
 @dataclass(slots=True)
 class ParsedDish:
     name_original: str
@@ -96,15 +165,28 @@ class ParsedDish:
     currency: str | None
     ingredients: list[str] | None
     allergens: list[str] | None
+    allergen_risk: str | None
+    hidden_risks: list[str] | None
     is_vegetarian: bool | None
     is_vegan: bool | None
+    is_halal_possible: bool | None
     spice_level: int | None
+    local_popularity: str | None
+    tourist_trap_risk: str | None
+    value_assessment: str | None
+    recommendation_score: int | None
+    cultural_context: dict[str, Any] | None
+    metadata: dict[str, Any] | None
 
 
 @dataclass(slots=True)
 class ParsedMenu:
     restaurant_name: str | None
+    location: str | None
+    cuisine_type: str | None
     dishes: list[ParsedDish]
+    ai_recommendations: dict[str, Any] | None
+    order_suggestions: dict[str, Any] | None
 
 
 @dataclass(slots=True)
@@ -286,28 +368,71 @@ class MenuVisionService:
 
     @classmethod
     def _to_parsed_menu(cls, raw: dict[str, Any]) -> ParsedMenu:
+        ctx = raw.get("restaurant_context") or {}
         dishes = [cls._to_parsed_dish(d) for d in raw.get("dishes", [])]
         return ParsedMenu(
-            restaurant_name=raw.get("restaurant_name"),
+            restaurant_name=_as_str(ctx.get("name")) or _as_str(raw.get("restaurant_name")),
+            location=_as_str(ctx.get("location")),
+            cuisine_type=_as_str(ctx.get("cuisine_type")),
             dishes=[d for d in dishes if d is not None],
+            ai_recommendations=raw.get("ai_recommendations") or None,
+            order_suggestions=raw.get("order_suggestions") or None,
         )
 
-    @staticmethod
-    def _to_parsed_dish(raw: Any) -> ParsedDish | None:
-        if not isinstance(raw, dict) or not raw.get("name_original"):
+    @classmethod
+    def _to_parsed_dish(cls, raw: Any) -> ParsedDish | None:
+        if not isinstance(raw, dict):
             return None
+
+        original = raw.get("original_name") or raw.get("name_original")
+        if not original:
+            return None
+
+        price_block = raw.get("price") if isinstance(raw.get("price"), dict) else None
+        price_value = _as_float(price_block.get("value")) if price_block else _as_float(raw.get("price"))
+        currency = (
+            _as_str(price_block.get("currency")) if price_block else _as_str(raw.get("currency"))
+        )
+
+        allergens_block = raw.get("allergens")
+        if isinstance(allergens_block, dict):
+            contains = _as_str_list(allergens_block.get("contains"))
+            risk_level = _pick_enum(allergens_block.get("risk_level"), _RISK_LEVELS)
+            hidden_risks = _as_str_list(allergens_block.get("hidden_risks"))
+        else:
+            contains = _as_str_list(allergens_block)
+            risk_level = None
+            hidden_risks = None
+        contains = [a for a in (contains or []) if a in _ALLERGEN_CANON] or None
+
+        flags = raw.get("dietary_flags") or {}
+        is_veg = _as_bool(flags.get("vegetarian") if flags else raw.get("is_vegetarian"))
+        is_vegan = _as_bool(flags.get("vegan") if flags else raw.get("is_vegan"))
+        halal = _as_bool(flags.get("halal_possible"))
+
+        insights = raw.get("smart_insights") or {}
+
         return ParsedDish(
-            name_original=str(raw["name_original"])[:300],
-            name_translated=_as_str(raw.get("name_translated")),
+            name_original=str(original)[:300],
+            name_translated=_as_str(raw.get("translated_name") or raw.get("name_translated")),
             description=_as_str(raw.get("description")),
             category=_as_str(raw.get("category")),
-            price=_as_float(raw.get("price")),
-            currency=_as_str(raw.get("currency")),
+            price=price_value,
+            currency=currency,
             ingredients=_as_str_list(raw.get("ingredients")),
-            allergens=_as_str_list(raw.get("allergens")),
-            is_vegetarian=_as_bool(raw.get("is_vegetarian")),
-            is_vegan=_as_bool(raw.get("is_vegan")),
+            allergens=contains,
+            allergen_risk=risk_level,
+            hidden_risks=hidden_risks,
+            is_vegetarian=is_veg,
+            is_vegan=is_vegan,
+            is_halal_possible=halal,
             spice_level=_as_int(raw.get("spice_level")),
+            local_popularity=_pick_enum(insights.get("local_popularity"), _RISK_LEVELS),
+            tourist_trap_risk=_pick_enum(insights.get("tourist_trap_risk"), _RISK_LEVELS),
+            value_assessment=_pick_enum(insights.get("value_assessment"), _VALUE_LEVELS),
+            recommendation_score=_as_int(raw.get("recommendation_score")),
+            cultural_context=raw.get("cultural_context") if isinstance(raw.get("cultural_context"), dict) else None,
+            metadata=raw,
         )
 
 
@@ -345,6 +470,13 @@ def _as_bool(v: Any) -> bool | None:
         if s in {"false", "no", "0"}:
             return False
     return None
+
+
+def _pick_enum(v: Any, allowed: set[str]) -> str | None:
+    if v is None:
+        return None
+    normalized = str(v).strip().lower()
+    return normalized if normalized in allowed else None
 
 
 def _as_str_list(v: Any) -> list[str] | None:

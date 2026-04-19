@@ -1,6 +1,24 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL ?? "http://localhost:8000";
 
+export type CulturalContext = {
+  origin?: string | null;
+  tradition?: string | null;
+  when_eaten?: string | null;
+};
+
+export type AiRecommendations = {
+  best_for_user?: { dish_name: string; reason: string }[];
+  avoid_if?: { condition: string; reason: string }[];
+};
+
+export type OrderSuggestions = {
+  light_option?: string | null;
+  protein_rich_option?: string | null;
+  budget_option?: string | null;
+  local_experience_option?: string | null;
+};
+
 export type Dish = {
   id: string;
   scan_id: string;
@@ -13,9 +31,17 @@ export type Dish = {
   currency: string | null;
   ingredients: string[] | null;
   allergens: string[] | null;
+  allergen_risk: "low" | "medium" | "high" | null;
+  hidden_risks: string[] | null;
   is_vegetarian: boolean | null;
   is_vegan: boolean | null;
+  is_halal_possible: boolean | null;
   spice_level: number | null;
+  local_popularity: "low" | "medium" | "high" | null;
+  tourist_trap_risk: "low" | "medium" | "high" | null;
+  value_assessment: "cheap" | "fair" | "expensive" | null;
+  recommendation_score: number | null;
+  cultural_context: CulturalContext | null;
   is_favorite: boolean;
   created_at: string;
 };
@@ -23,9 +49,13 @@ export type Dish = {
 export type MenuScan = {
   id: string;
   restaurant_name: string | null;
+  location: string | null;
+  cuisine_type: string | null;
   source_language: string;
   target_language: string;
   created_at: string;
+  ai_recommendations: AiRecommendations | null;
+  order_suggestions: OrderSuggestions | null;
   dishes: Dish[];
 };
 

@@ -42,9 +42,17 @@ class Dish {
     this.currency,
     this.ingredients,
     this.allergens,
+    this.allergenRisk,
+    this.hiddenRisks,
     this.isVegetarian,
     this.isVegan,
+    this.isHalalPossible,
     this.spiceLevel,
+    this.localPopularity,
+    this.touristTrapRisk,
+    this.valueAssessment,
+    this.recommendationScore,
+    this.culturalContext,
   });
 
   factory Dish.fromJson(Map<String, dynamic> json) {
@@ -60,9 +68,19 @@ class Dish {
       currency: json['currency'] as String?,
       ingredients: _stringList(json['ingredients']),
       allergens: _stringList(json['allergens']),
+      allergenRisk: json['allergen_risk'] as String?,
+      hiddenRisks: _stringList(json['hidden_risks']),
       isVegetarian: json['is_vegetarian'] as bool?,
       isVegan: json['is_vegan'] as bool?,
+      isHalalPossible: json['is_halal_possible'] as bool?,
       spiceLevel: json['spice_level'] as int?,
+      localPopularity: json['local_popularity'] as String?,
+      touristTrapRisk: json['tourist_trap_risk'] as String?,
+      valueAssessment: json['value_assessment'] as String?,
+      recommendationScore: json['recommendation_score'] as int?,
+      culturalContext: json['cultural_context'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['cultural_context'] as Map)
+          : null,
       isFavorite: json['is_favorite'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -79,9 +97,17 @@ class Dish {
   final String? currency;
   final List<String>? ingredients;
   final List<String>? allergens;
+  final String? allergenRisk;
+  final List<String>? hiddenRisks;
   final bool? isVegetarian;
   final bool? isVegan;
+  final bool? isHalalPossible;
   final int? spiceLevel;
+  final String? localPopularity;
+  final String? touristTrapRisk;
+  final String? valueAssessment;
+  final int? recommendationScore;
+  final Map<String, dynamic>? culturalContext;
   final bool isFavorite;
   final DateTime createdAt;
 
@@ -100,9 +126,17 @@ class Dish {
       currency: currency,
       ingredients: ingredients,
       allergens: allergens,
+      allergenRisk: allergenRisk,
+      hiddenRisks: hiddenRisks,
       isVegetarian: isVegetarian,
       isVegan: isVegan,
+      isHalalPossible: isHalalPossible,
       spiceLevel: spiceLevel,
+      localPopularity: localPopularity,
+      touristTrapRisk: touristTrapRisk,
+      valueAssessment: valueAssessment,
+      recommendationScore: recommendationScore,
+      culturalContext: culturalContext,
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt,
     );
@@ -117,15 +151,27 @@ class MenuScan {
     required this.createdAt,
     required this.dishes,
     this.restaurantName,
+    this.location,
+    this.cuisineType,
+    this.aiRecommendations,
+    this.orderSuggestions,
   });
 
   factory MenuScan.fromJson(Map<String, dynamic> json) {
     return MenuScan(
       id: json['id'] as String,
       restaurantName: json['restaurant_name'] as String?,
+      location: json['location'] as String?,
+      cuisineType: json['cuisine_type'] as String?,
       sourceLanguage: json['source_language'] as String? ?? 'auto',
       targetLanguage: json['target_language'] as String? ?? 'en',
       createdAt: DateTime.parse(json['created_at'] as String),
+      aiRecommendations: json['ai_recommendations'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['ai_recommendations'] as Map)
+          : null,
+      orderSuggestions: json['order_suggestions'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['order_suggestions'] as Map)
+          : null,
       dishes: (json['dishes'] as List<dynamic>?)
               ?.map((d) => Dish.fromJson(d as Map<String, dynamic>))
               .toList() ??
@@ -135,9 +181,13 @@ class MenuScan {
 
   final String id;
   final String? restaurantName;
+  final String? location;
+  final String? cuisineType;
   final String sourceLanguage;
   final String targetLanguage;
   final DateTime createdAt;
+  final Map<String, dynamic>? aiRecommendations;
+  final Map<String, dynamic>? orderSuggestions;
   final List<Dish> dishes;
 }
 
