@@ -20,6 +20,9 @@ def _tr(values: dict[str, str] | str, target_language: str) -> str:
     return values.get(target_language) or values.get("en") or next(iter(values.values()))
 
 
+_TRY_TO_USD = 0.031  # demo-fixture exchange rate; real one comes from AI at runtime
+
+
 def _dish(
     *,
     original: str,
@@ -27,6 +30,8 @@ def _dish(
     description: dict[str, str],
     category: str,
     price: float,
+    typical_min: float,
+    typical_max: float,
     ingredients: list[str],
     allergens_contain: list[str],
     allergen_risk: str,
@@ -43,12 +48,28 @@ def _dish(
     tradition: str,
     when_eaten: str,
 ) -> dict[str, Any]:
+    midpoint = (typical_min + typical_max) / 2
+    delta = round((price - midpoint) / midpoint * 100) if midpoint else None
+    if delta is None:
+        fairness = None
+    elif delta < -10:
+        fairness = "below_typical"
+    elif delta > 15:
+        fairness = "above_typical"
+    else:
+        fairness = "typical"
     return {
         "original": original,
         "translated": translated,
         "description": description,
         "category": category,
         "price": price,
+        "price_usd": round(price * _TRY_TO_USD, 1),
+        "typical_min": typical_min,
+        "typical_max": typical_max,
+        "price_fairness": fairness,
+        "price_delta_percent": delta,
+        "price_estimate_confidence": "medium",
         "ingredients": ingredients,
         "allergens_contain": allergens_contain,
         "allergen_risk": allergen_risk,
@@ -82,6 +103,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="soup",
         price=85,
+        typical_min=70,
+        typical_max=110,
         ingredients=["red lentils", "onion", "carrot", "paprika", "lemon"],
         allergens_contain=[],
         allergen_risk="low",
@@ -111,6 +134,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="appetizer",
         price=180,
+        typical_min=150,
+        typical_max=220,
         ingredients=["bulgur", "minced beef", "onion", "walnuts", "spices"],
         allergens_contain=["gluten", "nuts"],
         allergen_risk="high",
@@ -140,6 +165,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="main",
         price=420,
+        typical_min=280,
+        typical_max=380,
         ingredients=["lamb", "eggplant", "kaşar cheese", "butter", "flour"],
         allergens_contain=["dairy", "gluten"],
         allergen_risk="high",
@@ -169,6 +196,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="main",
         price=380,
+        typical_min=320,
+        typical_max=440,
         ingredients=["lamb", "red pepper", "garlic", "sumac", "parsley"],
         allergens_contain=[],
         allergen_risk="medium",
@@ -198,6 +227,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="main",
         price=320,
+        typical_min=260,
+        typical_max=360,
         ingredients=["flour", "egg", "minced beef", "yogurt", "garlic", "chili butter"],
         allergens_contain=["gluten", "egg", "dairy"],
         allergen_risk="high",
@@ -227,6 +258,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="salad",
         price=120,
+        typical_min=90,
+        typical_max=150,
         ingredients=["tomato", "cucumber", "green pepper", "onion", "parsley", "olive oil"],
         allergens_contain=[],
         allergen_risk="low",
@@ -256,6 +289,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="dessert",
         price=220,
+        typical_min=180,
+        typical_max=260,
         ingredients=["kadayıf", "cheese", "butter", "syrup", "pistachio"],
         allergens_contain=["dairy", "gluten", "nuts"],
         allergen_risk="high",
@@ -285,6 +320,8 @@ _DEMO_DISHES: list[dict[str, Any]] = [
         },
         category="drink",
         price=40,
+        typical_min=30,
+        typical_max=60,
         ingredients=["yogurt", "water", "salt"],
         allergens_contain=["dairy"],
         allergen_risk="medium",
@@ -382,7 +419,19 @@ def demo_menu(target_language: str) -> dict[str, Any]:
                 "translated_name": _tr(raw["translated"], target_language),
                 "description": _tr(raw["description"], target_language),
                 "category": raw["category"],
-                "price": {"value": raw["price"], "currency": "TRY"},
+                "price": {
+                    "value": raw["price"],
+                    "currency": "TRY",
+                    "usd_equivalent": raw["price_usd"],
+                },
+                "market_price_estimate": {
+                    "typical_min": raw["typical_min"],
+                    "typical_max": raw["typical_max"],
+                    "currency": "TRY",
+                    "fairness": raw["price_fairness"],
+                    "delta_percent": raw["price_delta_percent"],
+                    "confidence": raw["price_estimate_confidence"],
+                },
                 "ingredients": raw["ingredients"],
                 "allergens": {
                     "contains": raw["allergens_contain"],

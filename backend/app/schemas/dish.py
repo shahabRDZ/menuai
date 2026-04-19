@@ -12,6 +12,12 @@ class DishBase(BaseModel):
     category: str | None = None
     price: float | None = None
     currency: str | None = None
+    price_usd: float | None = None
+    typical_price_min: float | None = None
+    typical_price_max: float | None = None
+    price_fairness: str | None = None
+    price_delta_percent: int | None = None
+    price_estimate_confidence: str | None = None
     ingredients: list[str] | None = None
     allergens: list[str] | None = None
     allergen_risk: str | None = None

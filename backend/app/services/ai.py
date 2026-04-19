@@ -61,7 +61,19 @@ Schema — return exactly this shape (use null or [] for missing values):
       "description": string,
       "category": "appetizer" | "soup" | "salad" | "main" | "side"
                    | "dessert" | "drink" | "snack" | "unknown",
-      "price": { "value": number | null, "currency": string | null },
+      "price": {
+        "value": number | null,
+        "currency": string | null,
+        "usd_equivalent": number | null
+      },
+      "market_price_estimate": {
+        "typical_min": number | null,
+        "typical_max": number | null,
+        "currency": string | null,
+        "fairness": "below_typical" | "typical" | "above_typical" | null,
+        "delta_percent": number | null,
+        "confidence": "low" | "medium" | "high"
+      },
       "ingredients": [string, ...],
       "allergens": {
         "contains": [string, ...],
@@ -101,6 +113,19 @@ Schema — return exactly this shape (use null or [] for missing values):
 
 Allergen names must come from this set:
   gluten, dairy, egg, nuts, peanuts, seafood, fish, soy, sesame.
+
+Price intelligence rules:
+- `price.usd_equivalent` converts the menu price using your best approximate
+  exchange rate from your training data. Round to a sensible integer or .5.
+  Mark confidence appropriately — old training data + unstable currencies
+  (TRY, ARS) → confidence "low" or "medium".
+- `market_price_estimate` reflects what this dish *typically* costs in a
+  mid-range restaurant in the restaurant's region, in the same currency as
+  `price.currency`. `delta_percent` is (actual − midpoint) / midpoint × 100,
+  rounded to an integer. `fairness` follows from delta_percent:
+    delta < −10 → "below_typical"
+    −10 ≤ delta ≤ 15 → "typical"
+    delta > 15 → "above_typical"
 
 Translate `translated_name`, `description`, `ingredients`, the cultural context,
 and the recommendation reasons into the user's target language. Keep
@@ -153,6 +178,8 @@ _ALLERGEN_CANON = {
 }
 _RISK_LEVELS = {"low", "medium", "high"}
 _VALUE_LEVELS = {"cheap", "fair", "expensive"}
+_FAIRNESS_LEVELS = {"below_typical", "typical", "above_typical"}
+_CONFIDENCE_LEVELS = {"low", "medium", "high"}
 
 
 @dataclass(slots=True)
@@ -163,6 +190,12 @@ class ParsedDish:
     category: str | None
     price: float | None
     currency: str | None
+    price_usd: float | None
+    typical_price_min: float | None
+    typical_price_max: float | None
+    price_fairness: str | None
+    price_delta_percent: int | None
+    price_estimate_confidence: str | None
     ingredients: list[str] | None
     allergens: list[str] | None
     allergen_risk: str | None
@@ -393,6 +426,14 @@ class MenuVisionService:
         currency = (
             _as_str(price_block.get("currency")) if price_block else _as_str(raw.get("currency"))
         )
+        price_usd = _as_float(price_block.get("usd_equivalent")) if price_block else None
+
+        market = raw.get("market_price_estimate") if isinstance(raw.get("market_price_estimate"), dict) else {}
+        typical_min = _as_float(market.get("typical_min"))
+        typical_max = _as_float(market.get("typical_max"))
+        fairness = _pick_enum(market.get("fairness"), _FAIRNESS_LEVELS)
+        delta_percent = _as_int(market.get("delta_percent"))
+        price_confidence = _pick_enum(market.get("confidence"), _CONFIDENCE_LEVELS)
 
         allergens_block = raw.get("allergens")
         if isinstance(allergens_block, dict):
@@ -419,6 +460,12 @@ class MenuVisionService:
             category=_as_str(raw.get("category")),
             price=price_value,
             currency=currency,
+            price_usd=price_usd,
+            typical_price_min=typical_min,
+            typical_price_max=typical_max,
+            price_fairness=fairness,
+            price_delta_percent=delta_percent,
+            price_estimate_confidence=price_confidence,
             ingredients=_as_str_list(raw.get("ingredients")),
             allergens=contains,
             allergen_risk=risk_level,

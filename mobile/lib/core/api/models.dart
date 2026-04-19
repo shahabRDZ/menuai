@@ -40,6 +40,12 @@ class Dish {
     this.category,
     this.price,
     this.currency,
+    this.priceUsd,
+    this.typicalPriceMin,
+    this.typicalPriceMax,
+    this.priceFairness,
+    this.priceDeltaPercent,
+    this.priceEstimateConfidence,
     this.ingredients,
     this.allergens,
     this.allergenRisk,
@@ -66,6 +72,12 @@ class Dish {
       category: json['category'] as String?,
       price: (json['price'] as num?)?.toDouble(),
       currency: json['currency'] as String?,
+      priceUsd: (json['price_usd'] as num?)?.toDouble(),
+      typicalPriceMin: (json['typical_price_min'] as num?)?.toDouble(),
+      typicalPriceMax: (json['typical_price_max'] as num?)?.toDouble(),
+      priceFairness: json['price_fairness'] as String?,
+      priceDeltaPercent: json['price_delta_percent'] as int?,
+      priceEstimateConfidence: json['price_estimate_confidence'] as String?,
       ingredients: _stringList(json['ingredients']),
       allergens: _stringList(json['allergens']),
       allergenRisk: json['allergen_risk'] as String?,
@@ -95,6 +107,12 @@ class Dish {
   final String? category;
   final double? price;
   final String? currency;
+  final double? priceUsd;
+  final double? typicalPriceMin;
+  final double? typicalPriceMax;
+  final String? priceFairness;
+  final int? priceDeltaPercent;
+  final String? priceEstimateConfidence;
   final List<String>? ingredients;
   final List<String>? allergens;
   final String? allergenRisk;
@@ -124,6 +142,12 @@ class Dish {
       category: category,
       price: price,
       currency: currency,
+      priceUsd: priceUsd,
+      typicalPriceMin: typicalPriceMin,
+      typicalPriceMax: typicalPriceMax,
+      priceFairness: priceFairness,
+      priceDeltaPercent: priceDeltaPercent,
+      priceEstimateConfidence: priceEstimateConfidence,
       ingredients: ingredients,
       allergens: allergens,
       allergenRisk: allergenRisk,

@@ -162,6 +162,12 @@ class MenuService:
             category=parsed.category,
             price=parsed.price,
             currency=parsed.currency,
+            price_usd=parsed.price_usd,
+            typical_price_min=parsed.typical_price_min,
+            typical_price_max=parsed.typical_price_max,
+            price_fairness=parsed.price_fairness,
+            price_delta_percent=parsed.price_delta_percent,
+            price_estimate_confidence=parsed.price_estimate_confidence,
             ingredients=parsed.ingredients,
             allergens=parsed.allergens,
             allergen_risk=parsed.allergen_risk,
@@ -205,6 +211,16 @@ class MenuService:
             category=dish.category,
             price=float(dish.price) if dish.price is not None else None,
             currency=dish.currency,
+            price_usd=float(dish.price_usd) if dish.price_usd is not None else None,
+            typical_price_min=(
+                float(dish.typical_price_min) if dish.typical_price_min is not None else None
+            ),
+            typical_price_max=(
+                float(dish.typical_price_max) if dish.typical_price_max is not None else None
+            ),
+            price_fairness=dish.price_fairness,
+            price_delta_percent=dish.price_delta_percent,
+            price_estimate_confidence=dish.price_estimate_confidence,
             ingredients=dish.ingredients,
             allergens=dish.allergens,
             allergen_risk=dish.allergen_risk,

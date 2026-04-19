@@ -64,6 +64,12 @@ export function DishCard({ dish, showFavoriteButton = true }: Props) {
         {dish.local_popularity === "high" && <Pill tone="green">local favorite</Pill>}
         {dish.value_assessment === "expensive" && <Pill tone="amber">pricey</Pill>}
         {dish.value_assessment === "cheap" && <Pill tone="green">great value</Pill>}
+        {dish.price_fairness === "above_typical" && dish.price_delta_percent !== null && (
+          <Pill tone="red">{dish.price_delta_percent}% over market</Pill>
+        )}
+        {dish.price_fairness === "below_typical" && dish.price_delta_percent !== null && (
+          <Pill tone="green">{Math.abs(dish.price_delta_percent)}% under market</Pill>
+        )}
         {dish.allergens?.map((a) => (
           <Pill key={a} tone="amber">
             {a}
@@ -121,11 +127,20 @@ function ScoreBadge({ score }: { score: number }) {
 
 function formatPrice(dish: Dish): React.ReactNode {
   if (dish.price === null || dish.price === undefined) return null;
-  const formatted = dish.currency
+  const primary = dish.currency
     ? new Intl.NumberFormat(undefined, { style: "currency", currency: dish.currency })
         .format(dish.price)
     : dish.price.toString();
-  return <span className="text-sm font-medium text-ink-700">{formatted}</span>;
+  const usd =
+    dish.price_usd !== null && dish.price_usd !== undefined && dish.currency !== "USD"
+      ? `~$${dish.price_usd.toFixed(dish.price_usd >= 10 ? 0 : 1)}`
+      : null;
+  return (
+    <span className="text-right text-sm">
+      <span className="font-medium text-ink-700">{primary}</span>
+      {usd && <span className="block text-xs text-ink-500">{usd}</span>}
+    </span>
+  );
 }
 
 function Pill({

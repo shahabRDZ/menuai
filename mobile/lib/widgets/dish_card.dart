@@ -49,7 +49,11 @@ class DishCard extends StatelessWidget {
                 if (dish.recommendationScore != null)
                   _ScoreBadge(score: dish.recommendationScore!),
                 const SizedBox(width: 8),
-                _PriceLabel(price: dish.price, currency: dish.currency),
+                _PriceLabel(
+                  price: dish.price,
+                  currency: dish.currency,
+                  priceUsd: dish.priceUsd,
+                ),
                 IconButton(
                   onPressed: pending ? null : onToggleFavorite,
                   icon: Icon(
@@ -123,6 +127,12 @@ class DishCard extends StatelessWidget {
     }
     if (dish.valueAssessment == 'cheap') {
       yield const _Tag(label: 'great value', tone: _Tone.good);
+    }
+    if (dish.priceFairness == 'above_typical' && dish.priceDeltaPercent != null) {
+      yield _Tag(label: '${dish.priceDeltaPercent}% over market', tone: _Tone.warn);
+    }
+    if (dish.priceFairness == 'below_typical' && dish.priceDeltaPercent != null) {
+      yield _Tag(label: '${dish.priceDeltaPercent!.abs()}% under market', tone: _Tone.good);
     }
     for (final allergen in dish.allergens ?? const <String>[]) {
       yield _Tag(label: allergen, tone: _Tone.caution);
@@ -283,10 +293,15 @@ class _Titles extends StatelessWidget {
 }
 
 class _PriceLabel extends StatelessWidget {
-  const _PriceLabel({required this.price, required this.currency});
+  const _PriceLabel({
+    required this.price,
+    required this.currency,
+    this.priceUsd,
+  });
 
   final double? price;
   final String? currency;
+  final double? priceUsd;
 
   @override
   Widget build(BuildContext context) {
@@ -294,9 +309,25 @@ class _PriceLabel extends StatelessWidget {
     final formatted = currency != null
         ? NumberFormat.currency(name: currency, symbol: '').format(price)
         : price!.toStringAsFixed(2);
-    return Text(
-      '${currency ?? ''} ${formatted.trim()}'.trim(),
-      style: Theme.of(context).textTheme.titleSmall,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${currency ?? ''} ${formatted.trim()}'.trim(),
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        if (priceUsd != null && currency != 'USD')
+          Text(
+            priceUsd! >= 10
+                ? '~\$${priceUsd!.toStringAsFixed(0)}'
+                : '~\$${priceUsd!.toStringAsFixed(1)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey.shade600,
+                  fontSize: 11,
+                ),
+          ),
+      ],
     );
   }
 }

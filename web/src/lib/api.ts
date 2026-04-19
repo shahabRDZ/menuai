@@ -29,6 +29,12 @@ export type Dish = {
   category: string | null;
   price: number | null;
   currency: string | null;
+  price_usd: number | null;
+  typical_price_min: number | null;
+  typical_price_max: number | null;
+  price_fairness: "below_typical" | "typical" | "above_typical" | null;
+  price_delta_percent: number | null;
+  price_estimate_confidence: "low" | "medium" | "high" | null;
   ingredients: string[] | null;
   allergens: string[] | null;
   allergen_risk: "low" | "medium" | "high" | null;
