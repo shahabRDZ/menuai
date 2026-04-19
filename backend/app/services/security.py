@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from jose import JWTError, jwt
@@ -29,7 +29,7 @@ class TokenService:
         self._expire = timedelta(minutes=expire_minutes)
 
     def issue(self, user_id: UUID) -> str:
-        payload = {"sub": str(user_id), "exp": datetime.now(timezone.utc) + self._expire}
+        payload = {"sub": str(user_id), "exp": datetime.now(UTC) + self._expire}
         return jwt.encode(payload, self._secret, algorithm=self._algorithm)
 
     def verify(self, token: str) -> UUID | None:

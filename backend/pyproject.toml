@@ -1,3 +1,11 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
 [project]
 name = "menuai-backend"
 version = "0.1.0"
@@ -9,10 +17,11 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.30",
     "asyncpg>=0.29.0",
     "alembic>=1.13.0",
-    "pydantic>=2.8.0",
+    "pydantic[email]>=2.8.0",
     "pydantic-settings>=2.4.0",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
+    "bcrypt<5.0,>=4.0.1,!=4.1.*",
     "python-multipart>=0.0.9",
     "anthropic>=0.39.0",
     "redis>=5.0.0",
@@ -34,7 +43,12 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
-ignore = ["E501"]
+ignore = [
+    "E501",  # line too long — handled by formatter
+    "N818",  # Exception names — using HTTP-style names (NotFound, Conflict, ...)
+    "N811",  # Constant imported as non-constant — common SQLAlchemy alias pattern
+    "B008",  # Function call in argument default — FastAPI Depends/File/Form idiom
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

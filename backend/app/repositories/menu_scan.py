@@ -31,10 +31,6 @@ class MenuScanRepository(BaseRepository[MenuScan]):
         return [(scan, dish_count) for scan, dish_count in rows.all()]
 
     async def reload_with_dishes(self, scan_id: UUID) -> MenuScan:
-        stmt = (
-            select(MenuScan)
-            .options(selectinload(MenuScan.dishes))
-            .where(MenuScan.id == scan_id)
-        )
+        stmt = select(MenuScan).options(selectinload(MenuScan.dishes)).where(MenuScan.id == scan_id)
         result = await self.session.execute(stmt)
         return result.scalar_one()

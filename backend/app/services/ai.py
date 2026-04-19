@@ -8,6 +8,7 @@ The two system prompts are large and stable, so they are marked with
 ``cache_control`` ephemeral caching. Successive requests only pay for the
 user turn (image + short instruction).
 """
+
 import base64
 import json
 from dataclasses import dataclass

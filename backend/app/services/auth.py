@@ -29,9 +29,9 @@ class AuthService:
         try:
             await self.users.add(user)
             await self.users.session.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             await self.users.session.rollback()
-            raise Conflict("Email already registered")
+            raise Conflict("Email already registered") from exc
 
         await self.users.session.refresh(user)
         return user, self.token_service.issue(user.id)
